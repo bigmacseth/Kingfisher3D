@@ -45,3 +45,17 @@ class OrbitCamera:
 
     def get_view_matrix(self):
         return glm.lookAt(self.position, self.position + self.front, self.up)
+    
+    def zoom(self, yoffset):
+        self.distance -= yoffset * 0.5
+        self.distance = max(1.0, min(self.distance, 50.0)) # zoom clamp
+
+        # recalculate position immediately after zooming
+        rad_yaw = glm.radians(self.yaw)
+        rad_pitch = glm.radians(self.pitch)
+
+        self.position.x = self.target.x + self.distance * glm.cos(rad_pitch) * glm.cos(rad_yaw)
+        self.position.y = self.target.y + self.distance * glm.sin(rad_pitch)
+        self.position.z = self.target.z + self.distance * glm.cos(rad_pitch) * glm.sin(rad_yaw)
+
+        self.front = glm.normalize(self.target - self.position)

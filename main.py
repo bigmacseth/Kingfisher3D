@@ -8,6 +8,9 @@ from pyglm import glm
 from kingfisher.core.camera import OrbitCamera
 from kingfisher.core.loader import load_model
 
+import dearpygui.dearpygui as dpg
+import threading
+
 # Shader sources
 VERTEX_SHADER_SRC = """
 #version 330 core
@@ -60,6 +63,22 @@ def create_shader_program():
 def main():
     if not glfw.init():
         return
+    
+    def launch_ui():
+        dpg.create_context()
+        dpg.create_viewport(title="Kingfisher Control Panel", width=400, height=300)
+        dpg.setup_dearpygui()
+
+        with dpg.window(label="Controls"):
+            dpg.add_text("Settings")
+            dpg.add_slider_float(label="Light Intensity", min_value=0.0, max_value=1.0)
+            dpg.add_button(label="Reload Model")
+
+        dpg.show_viewport()
+        dpg.start_dearpygui()
+        dpg.destroy_context()
+
+    threading.Thread(target=launch_ui, daemon=True).start()
 
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
@@ -75,10 +94,11 @@ def main():
     glEnable(GL_DEPTH_TEST)
 
     camera = OrbitCamera()
-    def mouse_callback(window, xpos, ypos):
-        camera.update_mouse(xpos, ypos)
-    glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
-    glfw.set_cursor_pos_callback(window, mouse_callback)
+    def scroll_callback(window, xoffset, yoffset):
+        camera.zoom(yoffset)
+    
+    glfw.set_scroll_callback(window, scroll_callback)
+    glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_NORMAL)
 
     # Load model
     model_data = load_model("./kingfisher/assets/models/skull.obj")
@@ -139,6 +159,13 @@ def main():
 
         glfw.poll_events()
 
+        # Mouse control handling:
+        if glfw.get_window_attrib(window, glfw.FOCUSED):
+            if glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS:
+                xpos, ypos = glfw.get_cursor_pos(window)
+                camera.update_mouse(xpos, ypos)
+            
+
         # Close Window (ESC)
         if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
             glfw.set_window_should_close(window, True)
@@ -160,7 +187,7 @@ def main():
 
         glfw.swap_buffers(window)
 
-    glfw.terminate()
+    dpg.destroy_context()
 
 if __name__ == "__main__":
     main()
