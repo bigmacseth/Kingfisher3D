@@ -3,7 +3,6 @@ from OpenGL.GL import *
 import numpy as np
 import ctypes
 import time
-from pyassimp import load
 from pyglm import glm
 
 from kingfisher.core.camera import OrbitCamera
@@ -82,7 +81,7 @@ def main():
     glfw.set_cursor_pos_callback(window, mouse_callback)
 
     # Load model
-    model_data = load_model("./kingfisher/assets/models/horse.obj")
+    model_data = load_model("./kingfisher/assets/models/skull.obj")
     vertices = model_data["vertices"]
     faces = model_data["faces"]
     normals = model_data["normals"]
