@@ -177,6 +177,10 @@ def main():
 
         glfw.poll_events()
 
+        glfw_x, glfw_y = glfw.get_window_pos(window)
+        dpg.set_viewport_pos((glfw_x + 1000, glfw_y))  # Adjust offset as needed
+
+
         # Mouse control handling:
         if glfw.get_window_attrib(window, glfw.FOCUSED):
             if glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS:
