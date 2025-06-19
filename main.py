@@ -11,6 +11,8 @@ from kingfisher.core.loader import load_model
 import dearpygui.dearpygui as dpg
 import threading
 
+light_intesity = 1.0
+
 # Shader sources
 VERTEX_SHADER_SRC = """
 #version 330 core
@@ -37,9 +39,17 @@ in vec2 FragTexCoord;
 
 out vec4 FragColor;
 
+uniform float lightIntensity;
+uniform vec3 lightDirection;
+
 void main() {
-    float light = max(0.0, FragNormal.y);
-    FragColor = vec4(light, light * 0.5, light * 0.2, 1.0);
+    vec3 norm = normalize(FragNormal);
+    vec3 lightDir = normalize(lightDirection);
+
+    float diffuse = max(dot(norm, -lightDir), 0.0);
+    diffuse *= lightIntensity;
+
+    FragColor = vec4(diffuse, diffuse * 0.5, diffuse * 0.2, 1.0);
 }
 """
 
@@ -60,18 +70,24 @@ def create_shader_program():
     glLinkProgram(program)
     return program
 
+
+
 def main():
     if not glfw.init():
         return
     
     def launch_ui():
+        def update_light(sender, app_data):
+            global light_intesity
+            light_intesity = app_data
+
         dpg.create_context()
         dpg.create_viewport(title="Kingfisher Control Panel", width=400, height=300)
         dpg.setup_dearpygui()
 
         with dpg.window(label="Controls"):
             dpg.add_text("Settings")
-            dpg.add_slider_float(label="Light Intensity", min_value=0.0, max_value=1.0)
+            dpg.add_slider_float(label="Light Intensity", min_value=0.0, max_value=1.0, default_value=1.0, callback=update_light)
             dpg.add_button(label="Reload Model")
 
         dpg.show_viewport()
@@ -85,7 +101,7 @@ def main():
     glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
     glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
 
-    window = glfw.create_window(800, 600, "3D Viewer", None, None)
+    window = glfw.create_window(1000, 800, "3D Viewer", None, None)
     if not window:
         glfw.terminate()
         return
@@ -107,7 +123,7 @@ def main():
     normals = model_data["normals"]
     uvs = model_data["uvs"]
 
-    # Combine vertext attributes: [ position | normal | texcoord ]
+    # Combine vertex attributes: [ position | normal | texcoord ]
     vertex_data = []
 
     for i in range(len(vertices)):
@@ -149,6 +165,8 @@ def main():
     shader_program = create_shader_program()
     glUseProgram(shader_program)
     mvp_loc = glGetUniformLocation(shader_program, "mvp")
+    light_loc = glGetUniformLocation(shader_program, "lightIntensity")
+    light_dir_loc = glGetUniformLocation(shader_program, "lightDirection")
 
     last_time = time.time()
 
@@ -178,7 +196,14 @@ def main():
         projection = glm.perspective(glm.radians(45.0), 800/600, 0.1, 100.0)
         mvp = projection * view * model
 
+        angle = current_time * 0.5
+        light_direction = glm.vec3(glm.cos(angle), -1.0, glm.sin(angle))
+        light_direction = glm.normalize(light_direction)
+
         glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
+        glUniform1f(light_loc, light_intesity)
+        glUniform3f(light_dir_loc, light_direction.x, light_direction.y, light_direction.z)
+
 
         glUseProgram(shader_program)
         glBindVertexArray(VAO)
