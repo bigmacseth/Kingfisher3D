@@ -130,7 +130,7 @@ def main():
     glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_NORMAL)
 
     # Load model
-    model_data = load_model("./kingfisher/assets/models/skull.obj")
+    model_data = load_model("./kingfisher/assets/models/fish.obj")
     vertices = model_data["vertices"]
     faces = model_data["faces"]
     normals = model_data["normals"]
