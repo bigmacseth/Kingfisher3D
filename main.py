@@ -98,7 +98,6 @@ def main():
         with dpg.window(label="Controls"):
             dpg.add_text("Settings")
             dpg.add_slider_float(label="Light Intensity", min_value=0.0, max_value=1.0, default_value=1.0, callback=update_light)
-            dpg.add_button(label="Reload Model")
             dpg.add_button(label='Load Model', callback=lambda: dpg.show_item('model_file_picker'))
 
             with dpg.file_dialog(directory_selector=False, show=False, callback=load_model_callback, tag='model_file_picker', width=400, height=300):
@@ -195,6 +194,7 @@ def main():
 
 
     last_time = time.time()
+    is_middle_drag = False
 
     while not glfw.window_should_close(window):
         current_time = time.time()
@@ -253,8 +253,25 @@ def main():
         # Mouse control handling:
         if glfw.get_window_attrib(window, glfw.FOCUSED):
             if glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS:
+                if not is_middle_drag:
+                    glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+                    is_middle_drag = True
+
                 xpos, ypos = glfw.get_cursor_pos(window)
                 camera.update_mouse(xpos, ypos)
+
+            elif glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS:
+                if not is_middle_drag:
+                    glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+                    is_middle_drag = True
+
+                xpos, ypos = glfw.get_cursor_pos(window)
+                camera.update_pan(xpos, ypos)
+
+            elif is_middle_drag:
+                glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_NORMAL)
+                camera.first_mouse = True
+                is_middle_drag = False
             
 
         # Close Window (ESC)

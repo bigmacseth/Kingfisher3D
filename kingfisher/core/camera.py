@@ -42,6 +42,7 @@ class OrbitCamera:
         self.position.z = self.target.z + self.distance * glm.cos(rad_pitch) * glm.sin(rad_yaw)
 
         self.front = glm.normalize(self.target - self.position)
+        self.right = glm.normalize(glm.cross(self.front, self.up))
 
     def get_view_matrix(self):
         return glm.lookAt(self.position, self.position + self.front, self.up)
@@ -59,3 +60,32 @@ class OrbitCamera:
         self.position.z = self.target.z + self.distance * glm.cos(rad_pitch) * glm.sin(rad_yaw)
 
         self.front = glm.normalize(self.target - self.position)
+
+    def update_pan(self, xpos, ypos):
+        if self.first_mouse:
+            self.last_x = xpos
+            self.last_y = ypos
+            self.first_mouse = False
+
+        xoffset = xpos - self.last_x
+        yoffset = ypos - self.last_y
+        self.last_x = xpos
+        self.last_y = ypos
+
+        pan_speed = 0.0005 * self.distance
+        self.right = glm.normalize(glm.cross(self.front, self.up))
+
+        self.target += -self.right * xoffset * pan_speed
+        self.target += self.up * yoffset * pan_speed
+        self.update_position()    
+    
+    def update_position(self):
+        rad_yaw = glm.radians(self.yaw)
+        rad_pitch = glm.radians(self.pitch)
+
+        self.position.x = self.target.x + self.distance * glm.cos(rad_pitch) * glm.cos(rad_yaw)
+        self.position.y = self.target.y + self.distance * glm.sin(rad_pitch)
+        self.position.z = self.target.z + self.distance * glm.cos(rad_pitch) * glm.sin(rad_yaw)
+
+        self.front = glm.normalize(self.target - self.position)
+        self.right = glm.normalize(glm.cross(self.front, self.up))
