@@ -13,8 +13,6 @@ import threading
 
 light_intesity = 1.0
 
-# this is a test
-
 # Shader sources
 VERTEX_SHADER_SRC = """
 #version 330 core
@@ -26,9 +24,11 @@ out vec3 FragNormal;
 out vec2 FragTexCoord;
 
 uniform mat4 mvp;
+uniform mat4 model;
+uniform mat3 normalMatrix;
 
 void main() {
-    FragNormal = normal;
+    FragNormal = normalMatrix * normal;
     FragTexCoord = texcoord;
     gl_Position = mvp * vec4(position, 1.0);
 }
@@ -105,6 +105,11 @@ def main():
                 dpg.add_file_extension(".obj", color=(150, 255, 150, 255))
                 dpg.add_file_extension(".*")
 
+            dpg.add_slider_float(label="Rotate X", tag="rotate_x", min_value=-180, max_value=180, default_value=0)
+            dpg.add_slider_float(label="Rotate Y", tag="rotate_y", min_value=-180, max_value=180, default_value=0)
+            dpg.add_slider_float(label="Rotate Z", tag="rotate_z", min_value=-180, max_value=180, default_value=0)
+
+
         dpg.show_viewport()
         dpg.start_dearpygui()
         dpg.destroy_context()
@@ -180,9 +185,14 @@ def main():
 
     shader_program = create_shader_program()
     glUseProgram(shader_program)
+
     mvp_loc = glGetUniformLocation(shader_program, "mvp")
     light_loc = glGetUniformLocation(shader_program, "lightIntensity")
     light_dir_loc = glGetUniformLocation(shader_program, "lightDirection")
+
+    model_loc = glGetUniformLocation(shader_program, "model")
+    normal_matrix_loc = glGetUniformLocation(shader_program, "normalMatrix")
+
 
     last_time = time.time()
 
@@ -254,7 +264,20 @@ def main():
         glClearColor(0.1, 0.1, 0.1, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+        rotate_x = glm.radians(dpg.get_value("rotate_x"))
+        rotate_y = glm.radians(dpg.get_value("rotate_y"))
+        rotate_z = glm.radians(dpg.get_value("rotate_z"))
+
         model = glm.mat4(1.0)
+        model = glm.rotate(model, rotate_x, glm.vec3(1, 0, 0))
+        model = glm.rotate(model, rotate_y, glm.vec3(0, 1, 0))
+        model = glm.rotate(model, rotate_z, glm.vec3(0, 0, 1))
+
+        normal_matrix = glm.mat3(glm.transpose(glm.inverse(model)))
+
+        
+
+
         view = camera.get_view_matrix()
         projection = glm.perspective(glm.radians(45.0), 800/600, 0.1, 100.0)
         mvp = projection * view * model
@@ -266,6 +289,10 @@ def main():
         glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
         glUniform1f(light_loc, light_intesity)
         glUniform3f(light_dir_loc, light_direction.x, light_direction.y, light_direction.z)
+        glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm.value_ptr(model))
+        glUniformMatrix3fv(normal_matrix_loc, 1, GL_FALSE, glm.value_ptr(normal_matrix))
+
 
 
         glUseProgram(shader_program)
