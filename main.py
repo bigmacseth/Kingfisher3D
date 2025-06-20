@@ -13,6 +13,8 @@ import threading
 
 light_intesity = 1.0
 
+# this is a test
+
 # Shader sources
 VERTEX_SHADER_SRC = """
 #version 330 core
