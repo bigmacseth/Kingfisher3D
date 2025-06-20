@@ -70,16 +70,24 @@ def create_shader_program():
     glLinkProgram(program)
     return program
 
-
+pending_model_path = None 
 
 def main():
     if not glfw.init():
         return
     
+    global pending_model_path
+
     def launch_ui():
         def update_light(sender, app_data):
             global light_intesity
             light_intesity = app_data
+
+        def load_model_callback(sender, app_data):
+            global pending_model_path
+            pending_model_path = app_data['file_path_name']
+            print(f'Selected Model: {pending_model_path}')
+            
 
         dpg.create_context()
         dpg.create_viewport(title="Kingfisher Control Panel", width=400, height=300)
@@ -89,6 +97,11 @@ def main():
             dpg.add_text("Settings")
             dpg.add_slider_float(label="Light Intensity", min_value=0.0, max_value=1.0, default_value=1.0, callback=update_light)
             dpg.add_button(label="Reload Model")
+            dpg.add_button(label='Load Model', callback=lambda: dpg.show_item('model_file_picker'))
+
+            with dpg.file_dialog(directory_selector=False, show=False, callback=load_model_callback, tag='model_file_picker', width=400, height=300):
+                dpg.add_file_extension(".obj", color=(150, 255, 150, 255))
+                dpg.add_file_extension(".*")
 
         dpg.show_viewport()
         dpg.start_dearpygui()
@@ -136,13 +149,14 @@ def main():
 
     vertex_data = np.array(vertex_data, dtype=np.float32)
 
+   
     # VAO, VBO, EBO setup
     VAO = glGenVertexArrays(1)
     VBO = glGenBuffers(1)
     EBO = glGenBuffers(1)
 
     glBindVertexArray(VAO)
-
+    
     glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glBufferData(GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, GL_STATIC_DRAW)
 
@@ -160,7 +174,7 @@ def main():
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(24))
     glEnableVertexAttribArray(2)
 
-    glBindVertexArray(0)
+    glBindVertexArray(0) 
 
     shader_program = create_shader_program()
     glUseProgram(shader_program)
@@ -176,6 +190,49 @@ def main():
         last_time = current_time
 
         glfw.poll_events()
+
+        
+        if pending_model_path is not None:
+            try:
+                # Unbind VAO/VBOs
+                glBindVertexArray(0)
+
+                # Reload Model
+                new_model_data = load_model(pending_model_path)
+                new_vertices = new_model_data["vertices"]
+                new_faces = new_model_data["faces"]
+                new_normals = new_model_data["normals"]
+                new_uvs = new_model_data["uvs"]
+
+                # Prepare new vertex data
+                new_vertex_data = []
+                for i in range(len(new_vertices)):
+                    pos = new_vertices[i]
+                    norm = new_normals[i] if new_normals is not None else [0.0, 0.0, 0.0]
+                    uv = new_uvs[i] if new_uvs is not None else [0.0, 0.0]
+                    new_vertex_data.extend(pos)
+                    new_vertex_data.extend(norm)
+                    new_vertex_data.extend(uv)
+
+                new_vertex_data = np.array(new_vertex_data, dtype=np.float32)
+
+                # Update GPU buffers
+                glBindBuffer(GL_ARRAY_BUFFER, VBO)
+                glBufferData(GL_ARRAY_BUFFER, new_vertex_data.nbytes, new_vertex_data, GL_STATIC_DRAW)
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, new_faces.nbytes, new_faces, GL_STATIC_DRAW)
+
+                # Update face count for drawing
+                faces = new_faces
+
+                print(f"Model reloaded: {pending_model_path}")
+            except Exception as e:
+                print(f"Failed to load model: {e}")
+
+            # Clear the flag
+            pending_model_path = None
+
 
         glfw_x, glfw_y = glfw.get_window_pos(window)
         dpg.set_viewport_pos((glfw_x + 1000, glfw_y))  # Adjust offset as needed
