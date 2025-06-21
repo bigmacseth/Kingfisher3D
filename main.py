@@ -7,6 +7,7 @@ from pyglm import glm
 
 from kingfisher.core.camera import OrbitCamera
 from kingfisher.core.loader import load_model
+from kingfisher.core.texture import load_texture
 
 import dearpygui.dearpygui as dpg
 import threading
@@ -41,12 +42,14 @@ in vec2 FragTexCoord;
 
 out vec4 FragColor;
 
+uniform sampler2D texture1;
 uniform float lightIntensity;
 uniform vec3 lightDirection;
 
 void main() {
     vec3 norm = normalize(FragNormal);
     vec3 lightDir = normalize(lightDirection);
+    vec4 texColor = texture(texture1, FragTexCoord);
 
     float diffuse = max(dot(norm, -lightDir), 0.0);
     diffuse *= lightIntensity;
@@ -88,8 +91,6 @@ def main():
         def load_model_callback(sender, app_data):
             global pending_model_path
             pending_model_path = app_data['file_path_name']
-            print(f'Selected Model: {pending_model_path}')
-            
 
         dpg.create_context()
         dpg.create_viewport(title="Kingfisher Control Panel", width=400, height=300)
@@ -238,7 +239,6 @@ def main():
                 # Update face count for drawing
                 faces = new_faces
 
-                print(f"Model reloaded: {pending_model_path}")
             except Exception as e:
                 print(f"Failed to load model: {e}")
 
